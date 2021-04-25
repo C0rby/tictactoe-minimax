@@ -2,67 +2,127 @@
 
 # Symbols
 EMPTY = '.'
-X = 'X' 
-O = 'O' 
+X = 'X'
+O = 'O'
 
-def print_board(board):
-    rows = [board[i: i+3] for i in range(0, 7, 3)]
-    for row in rows:
-        print(' '.join(map(str, row)))
+EMPTY_BOARD = [EMPTY, EMPTY, EMPTY,
+               EMPTY, EMPTY, EMPTY,
+               EMPTY, EMPTY, EMPTY]
 
-board1 = [EMPTY, EMPTY, EMPTY,
-          EMPTY, EMPTY, EMPTY,
-          EMPTY, EMPTY, EMPTY]
-#print_board(board1)
-#print(board1)
+class Board:
 
-def isMovesLeft(board):
-    return 0 in board
+    def __init__(self, fields = None):
+        self._fields = fields or EMPTY_BOARD
 
-#print(isMovesLeft(board))
+    def __str__(self):
+        rows = [self._fields[i: i+3] for i in range(0, 7, 3)]
+        b = []
+        for row in rows:
+            b.append(' '.join(map(str, row)))
+        return '\n'.join(b) + '\n'
 
-full_board = [X, X, X,
-              X, X, X,
-              X, X, X]
-#print(not isMovesLeft(full_board))
+    def isMovesLeft(self):
+        return EMPTY in self._fields
 
-def hasSameSymbols(board, idx1, idx2, idx3):
-    return board[idx1] != 0 and \
-           board[idx1] == board[idx2] == board[idx3]
+    def evaluate(self):
+        if self.hasSameSymbol(1, 4, 7) or \
+           self.hasSameSymbol(0, 4, 8) or \
+           self.hasSameSymbol(2, 4, 6) or \
+           self.hasSameSymbol(3, 4, 5):
+            if self.cell_at(4) == X:
+                return 10
+            else:
+                return -10
+        elif self.hasSameSymbol(0, 1, 2) or \
+             self.hasSameSymbol(0, 3, 6):
+            if self.cell_at(0) == X:
+                return 10
+            else:
+                return -10
+        elif self.hasSameSymbol(2, 5, 8) or \
+             self.hasSameSymbol(6, 7, 8):
+            if self.cell_at(8) == X:
+                return 10
+            else:
+                return -10
+        return 0
 
-def has3Connections(board):
-    return hasSameSymbols(board, 0, 1, 2) or \
-           hasSameSymbols(board, 0, 4, 8) or \
-           hasSameSymbols(board, 0, 3, 6) or \
-           hasSameSymbols(board, 1, 4, 7) or \
-           hasSameSymbols(board, 2, 4, 6) or \
-           hasSameSymbols(board, 3, 4, 5) or \
-           hasSameSymbols(board, 2, 5, 8) or \
-           hasSameSymbols(board, 6, 7, 8)
+    def hasSameSymbol(self, idx1,idx2,idx3):
+        return self._fields[idx1] != EMPTY and \
+               self._fields[idx1] == self._fields[idx2] == self._fields[idx3]
 
-def isTerminalState(board):
-    """
-    [0,1,2,
-     3,4,5,
-     6,7,8]
-    """
-    return not isMovesLeft(board) or \
-           has3Connections(board) 
+    def isTerminalState(self):
+        return not self.isMovesLeft() or self.evaluate() != 0
 
-def board_value(board):
-    return int(has3Connections(board))
+    def board_value(self):
+        return int(self.has3Connections())
+
+    def cell_at(self, idx):
+        return self._fields[idx]
+
+    def set_cell(self, idx, symbol):
+        self._fields[idx] = symbol
+
+    def empty_cell(self, idx):
+        self.set_cell(idx, EMPTY)
+
+    def show_move(self, idx, symbol):
+        self._fields[idx] = symbol
+        print(self)
+        self._fields[idx] = EMPTY
+
+def findBestMove(board):
+    bestScore = -1 
+    bestMove = -1
+    for i in range(9):
+        if board.cell_at(i) == EMPTY:
+            board.set_cell(i, X)
+            score = minimax(board, 0, True)
+            board.empty_cell(i)
+            if bestScore < score:
+                bestScore = score
+                bestMove = i
+                print('best: ', bestScore)
+                board.show_move(bestMove, X)
+    return bestMove
 
 def minimax(board, depth, isMaxPlayer):
-    if isTerminalState(board):
-        if not has3Connections(board):
-            return 0
-        
-        v = board_value(board)
-        if isMaxPlayer:
-            return v
+    if board.isTerminalState():
+        score = board.evaluate()
+        if score == 0:
+            return score
+        elif isMaxPlayer:
+            return board.evaluate() - depth
         else:
-            return -v
+            return board.evaluate() + depth
+    if isMaxPlayer:
+        score = -11
+        for i in range(9):
+            if board.cell_at(i) == EMPTY:
+                board.set_cell(i, X)
+                score = max(score, minimax(board, depth+1, False))
+                board.empty_cell(i)
+        return score
+    else:
+        score = 11
+        for i in range(9):
+            if board.cell_at(i) == EMPTY:
+                board.set_cell(i, O)
+                score = min(score, minimax(board, depth+1, True))
+                board.empty_cell(i)
+        return score
 
-some_board = [X, X, O, O, O, O, X, X, O]
-print(minimax(some_board, 0, False))        
-print_board(some_board)
+
+board = Board([X, O, X, O, EMPTY, X, EMPTY, EMPTY, EMPTY])
+#board = Board()
+while not board.isTerminalState():
+    com_pos = findBestMove(board)
+    board.set_cell(com_pos, X)
+    print(board)
+    pos = int(input("Position: "))
+    if board.cell_at(pos) != EMPTY:
+        print("Position is not empty")
+        continue
+    board.set_cell(pos, O) 
+    print(board)
+
