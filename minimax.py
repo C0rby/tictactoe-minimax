@@ -45,6 +45,7 @@ class Board:
                 return 10
             else:
                 return -10
+
         return 0
 
     def hasSameSymbol(self, idx1,idx2,idx3):
@@ -77,13 +78,11 @@ def findBestMove(board):
     for i in range(9):
         if board.cell_at(i) == EMPTY:
             board.set_cell(i, X)
-            score = minimax(board, 0, True)
+            score = minimax(board, 0, False)
             board.empty_cell(i)
             if bestScore < score:
                 bestScore = score
                 bestMove = i
-                print('best: ', bestScore)
-                board.show_move(bestMove, X)
     return bestMove
 
 def minimax(board, depth, isMaxPlayer):
@@ -92,9 +91,9 @@ def minimax(board, depth, isMaxPlayer):
         if score == 0:
             return score
         elif isMaxPlayer:
-            return board.evaluate() - depth
+            return score - depth
         else:
-            return board.evaluate() + depth
+            return score + depth
     if isMaxPlayer:
         score = -11
         for i in range(9):
@@ -113,16 +112,22 @@ def minimax(board, depth, isMaxPlayer):
         return score
 
 
-board = Board([X, O, X, O, EMPTY, X, EMPTY, EMPTY, EMPTY])
-#board = Board()
+#board = Board([X, O, X, O, EMPTY, X, EMPTY, EMPTY, EMPTY])
+board = Board()
+
+turn = O
 while not board.isTerminalState():
-    com_pos = findBestMove(board)
-    board.set_cell(com_pos, X)
+    if turn == X:
+        com_pos = findBestMove(board)
+        board.set_cell(com_pos, X)
+        turn = O
+    elif turn == O:
+        pos = int(input("Position: "))
+        if board.cell_at(pos) != EMPTY:
+            print("Position is not empty")
+            continue
+        board.set_cell(pos, O) 
+        turn = X
     print(board)
-    pos = int(input("Position: "))
-    if board.cell_at(pos) != EMPTY:
-        print("Position is not empty")
-        continue
-    board.set_cell(pos, O) 
-    print(board)
+
 
