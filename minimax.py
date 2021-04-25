@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import time
+import random
+
 # Symbols
 EMPTY = '.'
 X = 'X'
@@ -72,7 +75,20 @@ class Board:
         print(self)
         self._fields[idx] = EMPTY
 
-def findBestMove(board):
+def findBestMoveO(board):
+    bestScore = 11 
+    bestMove = -1
+    for i in range(9):
+        if board.cell_at(i) == EMPTY:
+            board.set_cell(i, O)
+            score = minimax(board, 0, True)
+            board.empty_cell(i)
+            if bestScore > score:
+                bestScore = score
+                bestMove = i
+    return bestMove
+
+def findBestMoveX(board):
     bestScore = -1 
     bestMove = -1
     for i in range(9):
@@ -84,6 +100,8 @@ def findBestMove(board):
                 bestScore = score
                 bestMove = i
     return bestMove
+
+
 
 def minimax(board, depth, isMaxPlayer):
     if board.isTerminalState():
@@ -112,22 +130,28 @@ def minimax(board, depth, isMaxPlayer):
         return score
 
 
-#board = Board([X, O, X, O, EMPTY, X, EMPTY, EMPTY, EMPTY])
+#board = Board([X, O, X, O, O, X, EMPTY, EMPTY, EMPTY])
 board = Board()
+
+first_pos = random.randrange(9)
+
+board.set_cell(first_pos, X)
 
 turn = O
 while not board.isTerminalState():
     if turn == X:
-        com_pos = findBestMove(board)
+        com_pos = findBestMoveX(board)
         board.set_cell(com_pos, X)
         turn = O
     elif turn == O:
-        pos = int(input("Position: "))
-        if board.cell_at(pos) != EMPTY:
-            print("Position is not empty")
-            continue
-        board.set_cell(pos, O) 
+        #pos = int(input("Position: "))
+        #if board.cell_at(pos) != EMPTY:
+        #    print("Position is not empty")
+        #    continue
+        pos = findBestMoveO(board) 
+        board.set_cell(pos, turn) 
         turn = X
     print(board)
+    time.sleep(1.5)
 
 
