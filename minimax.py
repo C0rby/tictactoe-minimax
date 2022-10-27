@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+import time
 
 EMPTY = '.'
 P1 = 'x'
@@ -48,9 +49,11 @@ def next_states(board, player):
     for i in range(3):
         for j in range(3):
             if board[i][j] == EMPTY:
-                board[i][j] = player
-                yield board
-                board[i][j] = EMPTY
+                try:
+                    board[i][j] = player
+                    yield board
+                finally:
+                    board[i][j] = EMPTY
 
 
 def print_board(board):
@@ -59,25 +62,37 @@ def print_board(board):
     print()
 
 
-def _min(board):
+def _min(board, alpha, beta):
     is_terminal, winner = evaluate(board)
     if is_terminal:
         return SCORE_MAP[winner]
 
     score = 2
     for s in next_states(board, P2):
-        score = min(score, _max(board))
+        ss = _max(board, alpha, beta)
+        if ss < score:
+            score = ss
+        if ss <= alpha:
+            return score
+        if ss < beta:
+            beta = ss
     return score
 
 
-def _max(board):
+def _max(board, alpha, beta):
     is_terminal, winner = evaluate(board)
     if is_terminal:
         return SCORE_MAP[winner]
 
     score = -2
     for s in next_states(board, P1):
-        score = max(score, _min(board))
+        ss = _min(board, alpha, beta)
+        if ss > score:
+            score = ss
+        if ss >= beta:
+            return score
+        if ss > alpha:
+            alpha = ss
     return score
 
 
@@ -85,10 +100,11 @@ b = copy.deepcopy(EMPTY_BOARD)
 
 currentPlayer = P1
 while not evaluate(b)[0]:
+    start = time.perf_counter()
     if currentPlayer == P1:
         score = -2
         for s in next_states(b, P1):
-            ss = _min(s)
+            ss = _min(s, -2, 2)
             if score < ss:
                 score = ss
                 b = copy.deepcopy(s)
@@ -97,11 +113,13 @@ while not evaluate(b)[0]:
         currentPlayer = P1
         x, y = map(int, input('Position:').split(','))
         b[x][y] = P2
+    stop = time.perf_counter()
+    print(f"Thinking time: {stop - start:0.4f} seconds")
     print_board(b)
 
 _, winner = evaluate(b)
 if winner == P1:
-    print("The AI won")
+    print("The Computer won")
 elif winner == P2:
     print("Congrats you won!")
 else:
