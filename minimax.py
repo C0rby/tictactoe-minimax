@@ -1,168 +1,108 @@
 #!/usr/bin/env python3
+import copy
 
-import time
-import random
-
-# Symbols
 EMPTY = '.'
-X = 'X'
-O = 'O'
+P1 = 'x'
+P2 = 'o'
 
-EMPTY_BOARD = [EMPTY, EMPTY, EMPTY,
-               EMPTY, EMPTY, EMPTY,
-               EMPTY, EMPTY, EMPTY]
-
-class Board:
-
-    def __init__(self, fields = None):
-        self._fields = fields or EMPTY_BOARD
-
-    def __str__(self):
-        rows = [self._fields[i: i+3] for i in range(0, 7, 3)]
-        b = []
-        for row in rows:
-            b.append(' '.join(map(str, row)))
-        return '\n'.join(b) + '\n'
-
-    def isMovesLeft(self):
-        return EMPTY in self._fields
-
-    def evaluate(self):
-        if self.hasSameSymbol(1, 4, 7) or \
-           self.hasSameSymbol(0, 4, 8) or \
-           self.hasSameSymbol(2, 4, 6) or \
-           self.hasSameSymbol(3, 4, 5):
-            if self.cell_at(4) == X:
-                return 10
-            else:
-                return -10
-        elif self.hasSameSymbol(0, 1, 2) or \
-             self.hasSameSymbol(0, 3, 6):
-            if self.cell_at(0) == X:
-                return 10
-            else:
-                return -10
-        elif self.hasSameSymbol(2, 5, 8) or \
-             self.hasSameSymbol(6, 7, 8):
-            if self.cell_at(8) == X:
-                return 10
-            else:
-                return -10
-
-        return 0
-
-    def hasSameSymbol(self, idx1,idx2,idx3):
-        return self._fields[idx1] != EMPTY and \
-               self._fields[idx1] == self._fields[idx2] == self._fields[idx3]
-
-    def isTerminalState(self):
-        return not self.isMovesLeft() or self.evaluate() != 0
-
-    def board_value(self):
-        return int(self.has3Connections())
-
-    def cell_at(self, idx):
-        return self._fields[idx]
-
-    def set_cell(self, idx, symbol):
-        self._fields[idx] = symbol
-
-    def empty_cell(self, idx):
-        self.set_cell(idx, EMPTY)
-
-    def show_move(self, idx, symbol):
-        self._fields[idx] = symbol
-        print(self)
-        self._fields[idx] = EMPTY
-
-def findBestMoveO(board):
-    bestScore = 1001 
-    bestMove = -1
-    for i in range(9):
-        if board.cell_at(i) == EMPTY:
-            board.set_cell(i, O)
-            score = minimax(board, 0, True, -1000, 1000)
-            board.empty_cell(i)
-            if bestScore > score:
-                bestScore = score
-                bestMove = i
-    return bestMove
-
-def findBestMoveX(board):
-    bestScore = -1001 
-    bestMove = -1
-    for i in range(9):
-        if board.cell_at(i) == EMPTY:
-            board.set_cell(i, X)
-            score = minimax(board, 0, False, -1000, 1000)
-            board.empty_cell(i)
-            if bestScore < score:
-                bestScore = score
-                bestMove = i
-    return bestMove
+EMPTY_BOARD = [[EMPTY, EMPTY, EMPTY],
+               [EMPTY, EMPTY, EMPTY],
+               [EMPTY, EMPTY, EMPTY]]
+SCORE_MAP = {
+    P1: 1,
+    EMPTY: 0,
+    P2: -1,
+}
 
 
+def evaluate(board):
+    """
+    [[0 1 2]
+    [0 1 2]
+    [0 1 2]]
+    """
+    for i in range(3):
+        # check horizontal
+        if board[i][0] == board[i][1] == board[i][2] != EMPTY:
+            return True, board[i][0]
+        # check vertical
+        elif board[0][i] == board[1][i] == board[2][i] != EMPTY:
+            return True, board[0][i]
 
-def minimax(board, depth, isMaxPlayer, alpha, beta):
-    if board.isTerminalState():
-        score = board.evaluate()
-        if score == 0:
-            return score
-        
-        if isMaxPlayer:
-            return score - depth
-        else:
-            return score + depth
+    # check diagonal top left to bottom right
+    if board[0][0] == board[1][1] == board[2][2] != EMPTY:
+        return True, board[0][0]
+    # check diagonal top left to bottom right
+    elif board[0][2] == board[1][1] == board[2][0] != EMPTY:
+        return True, board[0][2]
 
-    if isMaxPlayer:
-        score = -1000
-        for i in range(9):
-            if board.cell_at(i) == EMPTY:
-                board.set_cell(i, X)
-                score = max(score, minimax(board, depth+1, False, alpha, beta))
-                board.empty_cell(i)
-                alpha = max(alpha, score)
-                if alpha >= beta:
-                    break
-        return score
+    if EMPTY not in board[0] and \
+       EMPTY not in board[1] and \
+       EMPTY not in board[2]:
+        return True, EMPTY
+
+    return False, EMPTY
+
+
+def next_states(board, player):
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == EMPTY:
+                board[i][j] = player
+                yield board
+                board[i][j] = EMPTY
+
+
+def print_board(board):
+    for i in range(3):
+        print(' '.join(board[i]))
+    print()
+
+
+def _min(board):
+    is_terminal, winner = evaluate(board)
+    if is_terminal:
+        return SCORE_MAP[winner]
+
+    score = 2
+    for s in next_states(board, P2):
+        score = min(score, _max(board))
+    return score
+
+
+def _max(board):
+    is_terminal, winner = evaluate(board)
+    if is_terminal:
+        return SCORE_MAP[winner]
+
+    score = -2
+    for s in next_states(board, P1):
+        score = max(score, _min(board))
+    return score
+
+
+b = copy.deepcopy(EMPTY_BOARD)
+
+currentPlayer = P1
+while not evaluate(b)[0]:
+    if currentPlayer == P1:
+        score = -2
+        for s in next_states(b, P1):
+            ss = _min(s)
+            if score < ss:
+                score = ss
+                b = copy.deepcopy(s)
+        currentPlayer = P2
     else:
-        score = 1000
-        for i in range(9):
-            if board.cell_at(i) == EMPTY:
-                board.set_cell(i, O)
-                score = min(score, minimax(board, depth+1, True, alpha, beta))
-                board.empty_cell(i)
-                beta = min(beta, score)
-                if beta <= alpha:
-                    break
-        return score
+        currentPlayer = P1
+        x, y = map(int, input('Position:').split(','))
+        b[x][y] = P2
+    print_board(b)
 
-
-#board = Board([X, O, X, O, O, X, EMPTY, EMPTY, EMPTY])
-board = Board()
-
-first_pos = random.randrange(9)
-
-board.set_cell(first_pos, X)
-
-turn = O
-while not board.isTerminalState():
-    print(board)
-    # time.sleep(1.5)
-    if turn == X:
-        com_pos = findBestMoveX(board)
-        board.set_cell(com_pos, X)
-        turn = O
-    elif turn == O:
-        pos = int(input("Position: "))
-        if board.cell_at(pos) != EMPTY:
-            print("Position is not empty")
-            continue
-        #pos = findBestMoveO(board) 
-        board.set_cell(pos, turn) 
-        turn = X
-
-print(board)    
-score = board.evaluate()
-print(score)
-
+_, winner = evaluate(b)
+if winner == P1:
+    print("The AI won")
+elif winner == P2:
+    print("Congrats you won!")
+else:
+    print("Draw!")
